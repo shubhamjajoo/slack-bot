@@ -47,7 +47,7 @@ router.get('/slack/callback',
       });
     }
   }, (req, res) => {
-    res.send('Slack bot installed successfully')
+    res.send('Slack bot installed/updated successfully')
   }
 );
 

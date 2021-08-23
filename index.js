@@ -5,11 +5,12 @@
  */
 const { App } = require('@slack/bolt');
 var { Teams, Authorizations } = require('./src/db/models/index');
-var app = require('./src/app.js');
 var debug = require('debug')('slack-bot:server');
 var http = require('http');
+
 const { CredentialsManager } = require('./src/lib/CredentialsManager');
 const { getUserInfo, updateUserStatus } = require('./src/api/user');
+var app = require('./src/app.js');
 
 const credentialsManager = new CredentialsManager()
 
