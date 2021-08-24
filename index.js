@@ -69,7 +69,6 @@ const boltApp = new App({
 
 boltApp.message('hello', async ({ message, say, client }) => {
   const { team: team_id, user: userId } = message;
-
   const team_client = await credentialsManager.getClientByTeamId(team_id);
   if (team_client) {
     await say(`Hey there <@${message.user}>!`)
@@ -88,15 +87,14 @@ boltApp.message('hello', async ({ message, say, client }) => {
         try {
           const getUserInfoResponse = await getUserInfo(message.user, { token: authToken, body: {} });
           await client.chat.postMessage({
-            as_user: true,
             channel: process.env.REMOTE_SLACK_CHANNEL_ID,
             token: team_client.dataValues.token,
             text: message.text,
             icon_url: getUserInfoResponse.user.profile.image_24,
-            username: getUserInfoResponse.user.real_name
+            username: getUserInfoResponse.user.profile.real_name
           });
           const userTimezoneOffset = getUserInfoResponse.user.tz_offset;
-          const statusExpiration = getTimestampInEpoch("10", userTimezoneOffset);
+          const statusExpiration = getTimestampInEpoch("7", userTimezoneOffset);
           profile.status_expiration = statusExpiration;
         } catch (error) {
           console.log('error while setting status_expiration slack status update', error);
