@@ -15,7 +15,7 @@ const app = require("./src/app.js");
 const credentialsManager = new CredentialsManager();
 
 const getTimestampInEpoch = (inputTime, userTimezoneOffsetInSeconds = 0) => {
-  const is12Hourformat = inputTime.toLowerCase().includes("pm");
+  const is12HourFormat = inputTime.toLowerCase().includes("pm");
   const time = inputTime.split(/am|pm/i)[0];
 
   let [hour, minute] = time.split(/[:,.]/);
@@ -24,7 +24,7 @@ const getTimestampInEpoch = (inputTime, userTimezoneOffsetInSeconds = 0) => {
   const isMidnight = hour === "12" && inputTime.toLowerCase().includes("am");
 
   hour =
-    (is12Hourformat && !isNoon) || isMidnight
+    (is12HourFormat && !isNoon) || isMidnight
       ? 12 + Number(hour)
       : Number(hour);
   hour = hour.length === 1 ? Number(`0${hour}`) : hour;
@@ -43,7 +43,7 @@ const getTimestampInEpoch = (inputTime, userTimezoneOffsetInSeconds = 0) => {
   return epochTime;
 };
 
-const authorizeFn = async ({ teamId, enterpriseId }) => {
+const authorizeFn = async ({ teamId }) => {
   // Fetch team info from database
   const authorizationRecord = await Teams.findAll({
     where: {
@@ -98,6 +98,7 @@ boltApp.message("hello", async ({ message, say, client }) => {
             token: authToken,
             body: {},
           });
+
           await client.chat.postMessage({
             channel: process.env.REMOTE_SLACK_CHANNEL_ID,
             token: team_client.dataValues.token,
@@ -116,7 +117,7 @@ boltApp.message("hello", async ({ message, say, client }) => {
           // This authorization is required to get the user timezone related information from https://api.slack.com/methods/users.info
           say(`\nYou may now automate the clearing status message and emoji as per *to* time hereafter.
           Please authorize the link:
-              <https://slack.com/oauth/authorize?scope=users:read&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize your identity for clearing status>`);
+              <https://slack.com/oauth/v2/authorize?scope=users:read&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize your identity for clearing status>`);
         }
         updateUserStatus({
           token: authToken,
@@ -128,13 +129,13 @@ boltApp.message("hello", async ({ message, say, client }) => {
             await say(`You may require to re-authorize to allow the status message and emoji as per *from and to* time hereafter.
             Please re-authorize all the links:`);
             await say(
-              ` < https://slack.com/oauth/v2/authorize?user_scope=identity.basic&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize your identity>`
+              `<https://slack.com/oauth/v2/authorize?user_scope=identity.basic&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize your identity>`
             );
             await say(
-              ` <https://slack.com/oauth/v2/authorize?user_scope=users:read&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize your identity for clearing status>`
+              `<https://slack.com/oauth/v2/authorize?user_scope=users:read&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize your identity for clearing status>`
             );
             await say(
-              ` <https://slack.com/oauth/v2/authorize?user_scope=users.profile:write&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize status message update>`
+              `<https://slack.com/oauth/v2/authorize?user_scope=users.profile:write&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize status message update>`
             );
           }
         });
