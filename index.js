@@ -34,7 +34,13 @@ const boltApp = new App({
   appToken: process.env.SLACK_APP_TOKEN,
 });
 
-boltApp.message("remote", boltController.processMessage);
+boltApp.message(/^(remote).*/, boltController.processMessage);
+
+boltApp.message(/^(?!.*(remote)).*/, async ({ say }) => {
+  await say(
+    `Sorry, I did not understand that. You can make use of me by just sending something like \`\`\`I am working remotely from 11 AM to 10 PM\nOR\nI am remote from 10:30 AM - 7:30 PM\nOR\nremote 10am - 8.30pm\`\`\``
+  );
+});
 
 /**
  * Get port from environment and store in Express.
