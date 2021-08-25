@@ -1,47 +1,11 @@
-#!/usr/bin/env node
-
-/**
- * Module dependencies.
- */
 const { App } = require("@slack/bolt");
-const { Teams, Authorizations } = require("./src/db/models/index");
+const { Teams } = require("./src/db/models/index");
 const debug = require("debug")("slack-bot:server");
 const http = require("http");
 
-const { CredentialsManager } = require("./src/lib/CredentialsManager");
-const { getUserInfo, updateUserStatus } = require("./src/api/user");
-const app = require("./src/app.js");
+const app = require("./src/app");
 
-const credentialsManager = new CredentialsManager();
-
-const getTimestampInEpoch = (inputTime, userTimezoneOffsetInSeconds = 0) => {
-  const is12HourFormat = inputTime.toLowerCase().includes("pm");
-  const time = inputTime.split(/am|pm/i)[0];
-
-  let [hour, minute] = time.split(/[:,.]/);
-
-  const isNoon = hour === "12" && inputTime.toLowerCase().includes("pm");
-  const isMidnight = hour === "12" && inputTime.toLowerCase().includes("am");
-
-  hour =
-    (is12HourFormat && !isNoon) || isMidnight
-      ? 12 + Number(hour)
-      : Number(hour);
-  hour = hour.length === 1 ? Number(`0${hour}`) : hour;
-
-  minute = Number(minute || "00");
-
-  const newDate = new Date();
-  const serverOffset = newDate.getTimezoneOffset() * 60;
-  const hasOffsetDifference = userTimezoneOffsetInSeconds + serverOffset;
-  let epochTime = Math.floor(newDate.setHours(hour, minute, 0) / 1000);
-
-  if (userTimezoneOffsetInSeconds && hasOffsetDifference) {
-    epochTime -= userTimezoneOffsetInSeconds;
-  }
-
-  return epochTime;
-};
+const boltController = require("./src/controllers/boltController");
 
 const authorizeFn = async ({ teamId }) => {
   // Fetch team info from database
@@ -70,81 +34,7 @@ const boltApp = new App({
   appToken: process.env.SLACK_APP_TOKEN,
 });
 
-boltApp.message("hello", async ({ message, say, client }) => {
-  const { team: team_id, user: userId } = message;
-  const team_client = await credentialsManager.getClientByTeamId(team_id);
-  if (team_client) {
-    await say(`Hey there <@${message.user}>!`);
-    const userData = await Authorizations.findByPk(userId);
-    if (!userData) {
-      await say(
-        ` <https://slack.com/oauth/v2/authorize?user_scope=identity.basic&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize your identity>`
-      );
-      await say(
-        ` <https://slack.com/oauth/v2/authorize?user_scope=users:read&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize your identity for clearing status>`
-      );
-      await say(
-        ` <https://slack.com/oauth/v2/authorize?user_scope=users.profile:write&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize status message update>`
-      );
-    } else {
-      const authToken = userData.dataValues.token;
-      if (authToken.length) {
-        const profile = {
-          status_text: `Working remotely from 7 to 10`,
-          status_emoji: ":house_with_garden:",
-        };
-        try {
-          const getUserInfoResponse = await getUserInfo(message.user, {
-            token: authToken,
-            body: {},
-          });
-
-          await client.chat.postMessage({
-            channel: process.env.REMOTE_SLACK_CHANNEL_ID,
-            token: team_client.dataValues.token,
-            text: message.text,
-            icon_url: getUserInfoResponse.user.profile.image_24,
-            username: getUserInfoResponse.user.profile.real_name,
-          });
-          const userTimezoneOffset = getUserInfoResponse.user.tz_offset;
-          const statusExpiration = getTimestampInEpoch("7", userTimezoneOffset);
-          profile.status_expiration = statusExpiration;
-        } catch (error) {
-          console.log(
-            "error while setting status_expiration slack status update",
-            error
-          );
-          // This authorization is required to get the user timezone related information from https://api.slack.com/methods/users.info
-          say(`\nYou may now automate the clearing status message and emoji as per *to* time hereafter.
-          Please authorize the link:
-              <https://slack.com/oauth/v2/authorize?scope=users:read&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize your identity for clearing status>`);
-        }
-        updateUserStatus({
-          token: authToken,
-          body: {
-            profile,
-          },
-        }).catch(async (err) => {
-          if (err.error === "invalid_auth" || err.error === "missing_scope") {
-            await say(`You may require to re-authorize to allow the status message and emoji as per *from and to* time hereafter.
-            Please re-authorize all the links:`);
-            await say(
-              `<https://slack.com/oauth/v2/authorize?user_scope=identity.basic&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize your identity>`
-            );
-            await say(
-              `<https://slack.com/oauth/v2/authorize?user_scope=users:read&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize your identity for clearing status>`
-            );
-            await say(
-              `<https://slack.com/oauth/v2/authorize?user_scope=users.profile:write&client_id=${process.env.SLACK_CLIENT_ID}|Click here to authorize status message update>`
-            );
-          }
-        });
-      }
-    }
-  } else {
-    throw new Error("Team not found");
-  }
-});
+boltApp.message("remote", boltController.processMessage);
 
 /**
  * Get port from environment and store in Express.
@@ -169,10 +59,10 @@ server.on("listening", onListening);
 (async () => {
   await boltApp.start(port);
 })();
+
 /**
  * Normalize a port into a number, string, or false.
  */
-
 function normalizePort(val) {
   const port = parseInt(val, 10);
 
@@ -192,7 +82,6 @@ function normalizePort(val) {
 /**
  * Event listener for HTTP server "error" event.
  */
-
 function onError(error) {
   if (error.syscall !== "listen") {
     throw error;
@@ -203,13 +92,11 @@ function onError(error) {
   // handle specific listen errors with friendly messages
   switch (error.code) {
     case "EACCES":
-      console.error(bind + " requires elevated privileges");
+      console.error(`${bind} requires elevated privileges`);
       process.exit(1);
-      break;
     case "EADDRINUSE":
-      console.error(bind + " is already in use");
+      console.error(`${bind} is already in use`);
       process.exit(1);
-      break;
     default:
       throw error;
   }
@@ -218,9 +105,8 @@ function onError(error) {
 /**
  * Event listener for HTTP server "listening" event.
  */
-
 function onListening() {
   const addr = server.address();
   const bind = typeof addr === "string" ? "pipe " + addr : "port " + addr.port;
-  debug("Listening on " + bind);
+  debug(`Listening on ${bind}`);
 }

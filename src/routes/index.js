@@ -5,7 +5,7 @@ const authRouter = require("./auth");
 const usersRouter = require("./users");
 
 router.get("/", function (_req, res) {
-  res.send("hello");
+  res.send("Hey there 👋");
 });
 
 router.use("/users", usersRouter);
