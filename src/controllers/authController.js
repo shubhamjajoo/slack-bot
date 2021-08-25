@@ -42,22 +42,17 @@ exports.setAuthorization = async (_req, res, next) => {
     },
   };
 
-  if (botAccessToken) {
-    try {
+  try {
+    if (botAccessToken) {
       await credentialsManager.setBotAuthorizations(data.team, extra);
-      next();
-    } catch (err) {
-      throw new Error(err);
-    }
-  } else {
-    try {
+    } else {
       await credentialsManager.setUserAuthorizations(
-        data.authed_user.access_token,
-        next
+        data.authed_user.access_token
       );
-    } catch (err) {
-      throw new Error(err);
     }
+    next();
+  } catch (err) {
+    throw new Error(err);
   }
 };
 

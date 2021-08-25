@@ -61,7 +61,7 @@ class CredentialsManager {
 
           teams.forEach(async (team) => {
             const teamResponse = await getTeamDetails(team.token);
-            const userList = teamResponse.members;
+            const userList = teamResponse.data.members;
 
             // Iterate over each user
             userList.forEach(async (user) => {
@@ -110,28 +110,30 @@ class CredentialsManager {
     });
   }
 
-  async setUserAuthorizations(token, done) {
-    try {
-      const userResponse = await getUserIdentity(token);
-      const userId = userResponse.user.id;
-      const teamId = userResponse.team.id;
+  async setUserAuthorizations(token) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { data: userResponse } = await getUserIdentity(token);
 
-      const authData = await Authorizations.findByPk(userId);
+        const userId = userResponse.user.id;
 
-      if (authData === null) {
-        await Authorizations.create({
-          // team_id: teamId,
-          id: userId,
-          token,
-        });
-      } else {
-        await authData.update({ token });
+        const authData = await Authorizations.findByPk(userId);
+
+        if (authData === null) {
+          await Authorizations.create({
+            id: userId,
+            token,
+          });
+        } else {
+          await authData.update({ token });
+        }
+        resolve();
+      } catch (err) {
+        reject(JSON.stringify(err));
       }
-      done(null, {});
-    } catch (error) {
-      done(error, {});
-    }
+    });
   }
+
   async getClientByTeamId(teamId) {
     return await Teams.findOne({
       where: {
