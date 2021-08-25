@@ -1,8 +1,11 @@
-import { get } from './index';
+import axios from "axios";
 
-const getTeamDetails = async (data) => {
+const getTeamDetails = async (token) => {
   try {
-    return await get('/users.list', data);
+    const params = new URLSearchParams();
+    params.append("token", token);
+
+    return await axios.post(`/users.list`, params);
   } catch (error) {
     throw error;
   }
