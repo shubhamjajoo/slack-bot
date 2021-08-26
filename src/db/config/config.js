@@ -3,25 +3,22 @@ require('dotenv').config();
 const { PGHOST, PGUSER, PGPASSWORD, PGDATABASE } = process.env;
 
 module.exports = {
-  "development": {
-    "username": PGUSER,
-    "password": PGPASSWORD,
-    "database": PGDATABASE,
-    "host": PGHOST,
-    "dialect": "postgres"
+  development: {
+    dialect: 'sqlite',
+    storage: `${process.cwd()}/src/db/slack_bot_development_db.sqlite`,
+    operatorsAliases: false
   },
-  "test": {
-    "username": PGUSER,
-    "password": PGPASSWORD,
-    "database": "database_test",
-    "host": PGHOST,
-    "dialect": "postgres"
+  test: {
+    username: process.env.CI_DB_USERNAME,
+    password: process.env.CI_DB_PASSWORD,
+    database: process.env.CI_DB_NAME,
+    host: '127.0.0.1',
+    dialect: 'sqlite',
+    operatorsAliases: false
   },
-  "production": {
-    "username": PGUSER,
-    "password": PGPASSWORD,
-    "database": "database_production",
-    "host": PGHOST,
-    "dialect": "postgres"
+  production: {
+    dialect: 'sqlite',
+    storage: `${process.cwd()}/src/db/slack_bot_production_db.sqlite`,
+    operatorsAliases: false
   }
 }
