@@ -1,7 +1,6 @@
-// import { WebClient as SlackClient } from '@slack/client';
-var { Teams, User, Authorizations } = require('../db/models/index');
-import getTeamDetails from '../api/getTeamDetails';
-import { getUserIdentity } from '../api/user';
+const { Teams, User, Authorizations } = require("../db/models/index");
+import getTeamDetails from "../api/getTeamDetails";
+import { getUserIdentity } from "../api/user";
 
 function extractParams(params) {
   const { real_name, email } = params.profile;
@@ -16,22 +15,22 @@ function extractParams(params) {
     image_url,
     time_zone,
     id,
-    team_id
+    team_id,
   };
 }
 
 class CredentialsManager {
   constructor() {
     this.scope = [
-      'identity.basic',
-      'identity.email',
-      'identity.team',
-      'identity.avatar',
-      'chat:write:user',
-      'users.profile:read',
-      'users.profile:write',
-      'reactions:read',
-      'users:read'
+      "identity.basic",
+      "identity.email",
+      "identity.team",
+      "identity.avatar",
+      "chat:write:user",
+      "users.profile:read",
+      "users.profile:write",
+      "reactions:read",
+      "users:read",
     ];
 
     this.botAuthorizations = null;
@@ -52,8 +51,8 @@ class CredentialsManager {
         where: {
           id: team.id,
           token: extra.bot.accessToken,
-          bot_user_id: extra.bot.bot_user_id
-        }
+          bot_user_id: extra.bot.bot_user_id,
+        },
       });
       if (authorizationRecord) {
         this.botAuthorizations = authorizationRecord[0];
@@ -62,7 +61,7 @@ class CredentialsManager {
 
           teams.forEach(async (team) => {
             const teamResponse = await getTeamDetails(team.token);
-            const userList = teamResponse.members;
+            const userList = teamResponse.data.members;
 
             // Iterate over each user
             userList.forEach(async (user) => {
@@ -71,8 +70,8 @@ class CredentialsManager {
               // Find if the user is already present, if not then create User
               const userRecord = await User.findAll({
                 where: {
-                  id: id
-                }
+                  id: id,
+                },
               });
 
               if (!userRecord.length) {
@@ -83,7 +82,7 @@ class CredentialsManager {
                   image_url,
                   time_zone,
                   id,
-                  team_id
+                  team_id,
                 } = extractParams(user);
                 await User.create({
                   user_name,
@@ -92,7 +91,7 @@ class CredentialsManager {
                   email,
                   time_zone,
                   team_id,
-                  id
+                  id,
                 });
               } else {
                 await slackBotEventManager.updateUserEvent(userRecord, user);
@@ -111,34 +110,35 @@ class CredentialsManager {
     });
   }
 
-  async setUserAuthorizations(token, done) {
-    try {
-      const userResponse = await getUserIdentity(token);
-      const userId = userResponse.user.id;
-      const teamId = userResponse.team.id;
+  async setUserAuthorizations(token) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { data: userResponse } = await getUserIdentity(token);
 
+        const userId = userResponse.user.id;
 
-      const authData = await Authorizations.findByPk(userId);
+        const authData = await Authorizations.findByPk(userId);
 
-      if (authData === null) {
-        await Authorizations.create({
-          // team_id: teamId,
-          id: userId,
-          token
-        });
-      } else {
-        await authData.update({ token });
+        if (authData === null) {
+          await Authorizations.create({
+            id: userId,
+            token,
+          });
+        } else {
+          await authData.update({ token });
+        }
+        resolve();
+      } catch (err) {
+        reject(JSON.stringify(err));
       }
-      done(null, {});
-    } catch (error) {
-      done(error, {});
-    }
+    });
   }
+
   async getClientByTeamId(teamId) {
     return await Teams.findOne({
       where: {
-        id: teamId
-      }
+        id: teamId,
+      },
     });
   }
 
@@ -154,4 +154,4 @@ class CredentialsManager {
       );
   }
 }
-module.exports = { CredentialsManager }
+module.exports = { CredentialsManager };

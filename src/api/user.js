@@ -1,8 +1,12 @@
-import { get, post } from './index';
+import axios from "axios";
+import { post } from "./index";
 
-const getUserIdentity = async (data) => {
+const getUserIdentity = async (token) => {
   try {
-    return await get('/users.identity', data);
+    const params = new URLSearchParams();
+    params.append("token", token);
+
+    return await axios.post("/users.identity", params);
   } catch (error) {
     throw error;
   }
@@ -10,7 +14,7 @@ const getUserIdentity = async (data) => {
 
 const updateUserStatus = async (data) => {
   try {
-    return await post('/users.profile.set', data);
+    return await post("/users.profile.set", data);
   } catch (error) {
     throw error;
   }
