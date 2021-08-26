@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "start": "nodemon -r esm -r dotenv/config ./index.js",
-    "db:create": "sequelize-cli db:create",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": " sequelize-cli db:migrate:undo"
   },
@@ -16,10 +15,9 @@
     "debug": "~2.6.9",
     "dotenv": "^10.0.0",
     "express": "~4.16.1",
-    "pg": "^8.7.1",
-    "pg-hstore": "^2.3.4",
     "request": "^2.88.2",
-    "sequelize": "^6.6.5"
+    "sequelize": "^6.6.5",
+    "sqlite3": "^5.0.2"
   },
   "devDependencies": {
     "esm": "^3.2.25",
