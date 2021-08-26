@@ -1,38 +1,38 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-require('dotenv').config();
+const express = require("express");
+const axios = require("axios");
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
-var authRouter = require('./routes/auth');
-var app = express();
+const cookieParser = require("cookie-parser");
+const logger = require("morgan");
+require("dotenv").config();
 
-app.use(logger('dev'));
+const routes = require("./routes");
+const errorHandlers = require("./helper/errorHandlers");
+const { SLACK_API_URL } = require("./helper/constants");
+
+const app = express();
+
+axios.defaults.baseURL = SLACK_API_URL;
+axios.defaults.headers.post["Content-Type"] =
+  "application/x-www-form-urlencoded";
+
+app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
 app.use(cookieParser());
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-app.use('/auth', authRouter);
+app.use("/", routes);
 
-// catch 404 and forward to error handler
-app.use(function (req, res, next) {
-  next(createError(404));
-});
+// If that above routes didn't work, we 404 them and forward to error handler
+app.use(errorHandlers.notFound);
 
-// error handler
-app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+// Otherwise this was a really bad error we didn't expect!
+if (app.get("env") === "development") {
+  /* Development Error Handler - Prints stack trace */
+  app.use(errorHandlers.developmentErrors);
+}
 
-  // render the error page
-  res.status(err.status || 500);
-  res.send('error');
-});
+// production error handler
+app.use(errorHandlers.productionErrors);
 
 module.exports = app;
